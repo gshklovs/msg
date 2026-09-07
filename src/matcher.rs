@@ -32,7 +32,7 @@ impl Ranker {
         }
         let pattern = Pattern::parse(query.trim(), CaseMatching::Ignore, Normalization::Smart);
         let mut buf = Vec::new();
-        let mut scored: Vec<(u32, i64, usize)> = Vec::new();
+        let mut scored: Vec<(u32, usize, i64, usize)> = Vec::new();
         for (i, p) in people.iter().enumerate() {
             let mut best = None;
             for hay in std::iter::once(&p.name).chain(p.handles.iter()) {
@@ -43,11 +43,18 @@ impl Ranker {
                 }
             }
             if let Some(score) = best {
-                scored.push((score, p.last_message_ts, i));
+                scored.push((score, p.name.chars().count(), p.last_message_ts, i));
             }
         }
-        scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1)).then(a.2.cmp(&b.2)));
-        scored.into_iter().map(|(_, _, i)| i).collect()
+        // Equal scores: the shorter name is the tighter match (fzf's rule), so
+        // "Grace Hopper" beats the group that merely contains her. Then recency.
+        scored.sort_by(|a, b| {
+            b.0.cmp(&a.0)
+                .then_with(|| a.1.cmp(&b.1))
+                .then_with(|| b.2.cmp(&a.2))
+                .then(a.3.cmp(&b.3))
+        });
+        scored.into_iter().map(|(_, _, _, i)| i).collect()
     }
 }
 
@@ -119,5 +126,15 @@ mod tests {
         ];
         let idx = Ranker::new().rank(&people, "abe");
         assert_eq!(names(&people, &idx)[0], "Abe");
+    }
+
+    #[test]
+    fn shorter_name_wins_ties_over_recency() {
+        let people = vec![
+            person("Ada Lovelace, Grace Hopper, Alan Turing", &["chat1"], 900),
+            person("Grace Hopper", &["+15550100001"], 100),
+        ];
+        let ranked = Ranker::new().rank(&people, "grac");
+        assert_eq!(ranked[0], 1);
     }
 }

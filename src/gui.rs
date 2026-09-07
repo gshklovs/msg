@@ -133,7 +133,12 @@ impl eframe::App for App {
         let mut chosen: Option<Person> = None;
         let mut cancel = false;
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        let panel = egui::CentralPanel::default().frame(
+            egui::Frame::none()
+                .fill(egui::Color32::from_rgb(0x14, 0x15, 0x1a))
+                .inner_margin(egui::Margin::symmetric(18.0, 14.0)),
+        );
+        panel.show(ctx, |ui| {
             ctx.input(|i| {
                 if i.key_pressed(egui::Key::Escape) {
                     cancel = true;
@@ -151,7 +156,9 @@ impl eframe::App for App {
                 egui::TextEdit::singleline(&mut self.picker.query)
                     .hint_text("who?")
                     .desired_width(f32::INFINITY)
-                    .font(egui::TextStyle::Heading),
+                    .frame(false)
+                    .margin(egui::vec2(4.0, 8.0))
+                    .font(egui::FontId::proportional(30.0)),
             );
             if self.focus_query {
                 edit.request_focus();
@@ -164,14 +171,39 @@ impl eframe::App for App {
                 chosen = self.picker.selected().cloned();
             }
 
+            ui.add_space(6.0);
             ui.separator();
+            ui.add_space(6.0);
             egui::ScrollArea::vertical().show(ui, |ui| {
                 let matches = self.picker.matches.clone();
                 for (row, i) in matches.iter().enumerate().take(200) {
                     let selected = row == self.picker.cursor;
-                    let text = label(&self.picker.people[*i]);
-                    if ui.selectable_label(selected, text).clicked() {
-                        chosen = Some(self.picker.people[*i].clone());
+                    let person = &self.picker.people[*i];
+                    let mut text = egui::RichText::new(label(person)).size(19.0);
+                    if selected {
+                        text = text.strong().color(egui::Color32::WHITE);
+                    } else {
+                        text = text.color(egui::Color32::from_gray(0xc8));
+                    }
+                    let (rect, resp) = ui.allocate_exact_size(
+                        egui::vec2(ui.available_width(), 36.0),
+                        egui::Sense::click(),
+                    );
+                    if selected {
+                        ui.painter().rect_filled(rect, 8.0, egui::Color32::from_rgb(0x2f, 0x6f, 0xed));
+                    } else if resp.hovered() {
+                        ui.painter().rect_filled(rect, 8.0, egui::Color32::from_rgb(0x22, 0x24, 0x2c));
+                    }
+                    ui.allocate_new_ui(egui::UiBuilder::new().max_rect(rect.shrink2(egui::vec2(14.0, 0.0))), |ui| {
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            ui.label(text);
+                        });
+                    });
+                    if selected {
+                        ui.scroll_to_rect(rect, None);
+                    }
+                    if resp.clicked() {
+                        chosen = Some(person.clone());
                     }
                 }
             });
@@ -232,6 +264,21 @@ pub fn daemon(hotkey_spec: &str, log: fn(&str)) -> Result<()> {
                         ctx.request_repaint();
                     }
                 }
+            });
+
+            let mut visuals = egui::Visuals::dark();
+            visuals.selection.bg_fill = egui::Color32::from_rgb(0x2f, 0x6f, 0xed);
+            visuals.selection.stroke = egui::Stroke::NONE;
+            visuals.widgets.hovered.weak_bg_fill = egui::Color32::from_rgb(0x22, 0x24, 0x2c);
+            visuals.widgets.active.weak_bg_fill = egui::Color32::from_rgb(0x2f, 0x6f, 0xed);
+            visuals.widgets.inactive.rounding = egui::Rounding::same(8.0);
+            visuals.widgets.hovered.rounding = egui::Rounding::same(8.0);
+            visuals.widgets.active.rounding = egui::Rounding::same(8.0);
+            visuals.extreme_bg_color = egui::Color32::from_rgb(0x14, 0x15, 0x1a);
+            cc.egui_ctx.set_visuals(visuals);
+            cc.egui_ctx.style_mut(|st| {
+                st.spacing.item_spacing = egui::vec2(8.0, 4.0);
+                st.spacing.button_padding = egui::vec2(12.0, 6.0);
             });
 
             Ok(Box::new(App {

@@ -51,7 +51,11 @@ pub fn cache_dir() -> Result<PathBuf> {
     Ok(d)
 }
 
+/// `MSG_CACHE` overrides the people list location (used for demos and tests).
 pub fn cache_path() -> Result<PathBuf> {
+    if let Some(p) = std::env::var_os("MSG_CACHE") {
+        return Ok(PathBuf::from(p));
+    }
     Ok(cache_dir()?.join("people.json"))
 }
 
@@ -444,7 +448,8 @@ pub fn rebuild() -> Result<Vec<Person>> {
 pub fn load() -> Result<Vec<Person>> {
     let cached = read_cache();
     if let Some(cache) = &cached {
-        if cache.sources == current_sources() && !cache.people.is_empty() {
+        let pinned = std::env::var_os("MSG_CACHE").is_some();
+        if (pinned || cache.sources == current_sources()) && !cache.people.is_empty() {
             return Ok(cache.people.clone());
         }
     }
