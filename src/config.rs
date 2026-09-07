@@ -33,7 +33,7 @@ impl Config {
         let Ok(text) = std::fs::read_to_string(&path) else {
             return Ok(Self::default());
         };
-        Ok(Self::parse(&text)?)
+        Self::parse(&text)
     }
 
     pub fn parse(text: &str) -> Result<Self> {

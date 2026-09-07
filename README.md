@@ -35,9 +35,13 @@ A missing file means the default above.
 
 ## macOS permissions
 
-Reading `chat.db` needs Full Disk Access for whatever runs `msg` (your terminal,
-or `msg` itself once installed as a LaunchAgent). Grant it in System Settings ->
-Privacy & Security -> Full Disk Access.
+Reading `chat.db` and the AddressBook databases needs Full Disk Access for
+whatever runs `msg`. In a terminal that is your terminal app. Under the
+LaunchAgent it is the `msg` binary itself, so add `~/.cargo/bin/msg` in System
+Settings -> Privacy & Security -> Full Disk Access before running `msg install`.
+
+Without it the daemon still starts and serves the last cached people list; it
+just cannot refresh it.
 
 The daemon's global hotkey uses a Carbon hotkey registration, which needs no
 special permission, but macOS will not deliver it if another app has already

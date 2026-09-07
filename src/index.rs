@@ -203,12 +203,10 @@ fn compose_name(
     if !parts.is_empty() {
         return Some(parts.join(" "));
     }
-    for fallback in [nick, org] {
-        if let Some(s) = fallback {
-            let s = s.trim().to_string();
-            if !s.is_empty() {
-                return Some(s);
-            }
+    for fallback in [nick, org].into_iter().flatten() {
+        let s = fallback.trim().to_string();
+        if !s.is_empty() {
+            return Some(s);
         }
     }
     None
@@ -404,11 +402,14 @@ pub fn build() -> Result<Vec<Person>> {
     contacts.dedup_by(|a, b| a.name == b.name && a.handles == b.handles);
 
     let chat_db = chat_db_path()?;
-    let chats = if chat_db.exists() {
-        read_chats(&open_ro(&chat_db)?)?
-    } else {
-        Vec::new()
-    };
+    let mut chats = Vec::new();
+    if chat_db.exists() {
+        match open_ro(&chat_db).and_then(|c| read_chats(&c)) {
+            Ok(v) => chats = v,
+            // Usually Full Disk Access. Contacts alone are still useful.
+            Err(e) => eprintln!("msg: cannot read {}: {e}", chat_db.display()),
+        }
+    }
 
     Ok(assemble(contacts, &chats))
 }
@@ -416,6 +417,10 @@ pub fn build() -> Result<Vec<Person>> {
 /// Rebuild and write the cache.
 pub fn rebuild() -> Result<Vec<Person>> {
     let people = build()?;
+    if people.is_empty() {
+        // Do not replace a good cache with nothing.
+        return Ok(people);
+    }
     let cache = Cache {
         sources: current_sources(),
         people: people.clone(),
@@ -426,16 +431,32 @@ pub fn rebuild() -> Result<Vec<Person>> {
 }
 
 /// The cached people list, rebuilt first when a source database has changed.
+///
+/// A rebuild that fails or comes back empty falls back to whatever is cached,
+/// so losing read access to the databases degrades to a stale list rather than
+/// to nothing.
 pub fn load() -> Result<Vec<Person>> {
-    let path = cache_path()?;
-    if let Ok(bytes) = std::fs::read(&path) {
-        if let Ok(cache) = serde_json::from_slice::<Cache>(&bytes) {
-            if cache.sources == current_sources() && !cache.people.is_empty() {
-                return Ok(cache.people);
-            }
+    let cached = read_cache();
+    if let Some(cache) = &cached {
+        if cache.sources == current_sources() && !cache.people.is_empty() {
+            return Ok(cache.people.clone());
         }
     }
-    rebuild()
+    match rebuild() {
+        Ok(people) if !people.is_empty() => Ok(people),
+        result => match cached {
+            Some(cache) if !cache.people.is_empty() => {
+                eprintln!("msg: using the cached people list; a rebuild found nothing");
+                Ok(cache.people)
+            }
+            _ => result,
+        },
+    }
+}
+
+fn read_cache() -> Option<Cache> {
+    let bytes = std::fs::read(cache_path().ok()?).ok()?;
+    serde_json::from_slice(&bytes).ok()
 }
 
 #[cfg(test)]

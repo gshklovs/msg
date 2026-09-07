@@ -105,3 +105,4 @@ fn uninstall() -> Result<()> {
     println!("removed {}", path.display());
     Ok(())
 }
+
