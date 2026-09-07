@@ -1,64 +1,132 @@
 # msg
 
-An fzf-style picker for iMessage conversations. Type a name, press Enter, land in
-that Messages thread.
+An fzf-style people picker for iMessage on macOS. Press a hotkey anywhere, type a
+few letters, hit Enter, and you are in that conversation. One Rust binary, no
+Electron, zero CPU while idle, popup in under 50 ms.
 
-## Use
+https://github.com/gshklovs/msg/releases/download/v0.1.0/msg-demo.mp4
 
-    msg              fuzzy picker in the terminal
-    msg index        rebuild the people cache
-    msg daemon       stay resident, popup on the global hotkey
-    msg install      start the daemon at login (launchd)
-    msg uninstall    stop starting the daemon at login
+![msg demo](docs/demo.gif)
 
-Typing filters; the top match is always selected. Enter opens the conversation,
-Esc quits. Arrow keys (or ctrl-n / ctrl-p) move the selection.
+Why: the Messages app's own "New Message" search is slow to populate and does not
+select the top match on Enter. This does.
 
-## Where the data comes from
+## Quickstart
 
-Contacts come from the AddressBook databases under
-`~/Library/Application Support/AddressBook`, conversations from
-`~/Library/Messages/chat.db`. Both are opened read-only. Phone numbers are
-normalized to E.164 so a contact and a Messages handle for the same person line
-up. The result is cached in `~/.cache/msg/people.json` and rebuilt whenever a
-source database changes.
+There are two halves to setting this up. The build and install can be done by an
+agent (Claude Code, Codex, whatever you use). The permission toggles can only be
+done by a human clicking in System Settings. macOS enforces that split.
 
-Nothing is written to either database and no message content is read.
+### What the agent does
 
-## Configuration
+Paste this section to your agent, or run it yourself.
+
+```sh
+# 1. Rust 1.88 or newer
+rustup update stable
+
+# 2. Build and install the binary
+git clone https://github.com/gshklovs/msg
+cd msg
+cargo build --release
+rm -f ~/.cargo/bin/msg          # remove first: copying over a running binary in place makes macOS kill it
+cp target/release/msg ~/.cargo/bin/msg
+
+# 3. Build the people list (reads chat.db and Contacts, takes about 50 ms)
+msg index
+
+# 4. Try it in the terminal
+msg
+
+# 5. Start the background daemon at login
+msg install
+```
+
+Then tell the human to grant the two permissions below and to press the hotkey.
+The agent cannot verify the hotkey; synthetic key events do not reach Carbon
+hotkey registrations. After the human grants permissions, restart the daemon:
+
+```sh
+launchctl kickstart -k gui/$(id -u)/net.shklovski.msg
+tail -3 ~/.cache/msg/daemon.log     # should no longer say "cannot read chat.db"
+```
+
+### What the human does
+
+Both entries go in System Settings, Privacy & Security. In each pane click the
+plus button, press Cmd+Shift+G in the file dialog, paste
+`/Users/<you>/.cargo/bin/msg`, click Open, and make sure the toggle is on.
+
+| Pane | Why |
+|---|---|
+| Full Disk Access | The daemon reads `~/Library/Messages/chat.db` and the Contacts database to refresh the list. Without it the daemon still runs on the last cached list; you just have to run `msg index` from a terminal to refresh. |
+| Accessibility | Opening a *named* group chat drives the Messages search field through System Events. People and unnamed groups need nothing. |
+
+Your terminal app needs the same two permissions for `msg` and `msg index` to
+work from a shell. Most terminals already have them.
+
+Then press **Cmd+Shift+M**. Type. Enter. Esc hides the popup.
+
+### Configure
 
 `~/.config/msg/config.toml`, one key:
 
-    hotkey = "cmd+shift+m"
+```toml
+hotkey = "cmd+shift+m"
+```
 
-A missing file means the default above.
+Modifiers are `cmd`, `ctrl`, `alt` (or `opt`), `shift`. Keys are letters, digits,
+`space`, `enter`, `tab`, `escape`, and `f1` to `f12`. A missing file means the
+default above. Restart the daemon after changing it.
 
-## macOS permissions
+Environment variables:
 
-Reading `chat.db` and the AddressBook databases needs Full Disk Access for
-whatever runs `msg`. In a terminal that is your terminal app. Under the
-LaunchAgent it is the `msg` binary itself, so add `~/.cargo/bin/msg` in System
-Settings -> Privacy & Security -> Full Disk Access before running `msg install`.
+| Variable | Effect |
+|---|---|
+| `MSG_CACHE` | Path to a people list to use instead of the real one. Also pins it, so the daemon will not rebuild from your databases. Used for demos and tests. |
 
-Without it the daemon still starts and serves the last cached people list; it
-just cannot refresh it.
+## Commands
 
-Opening a *named* group chat drives the Messages search field through System
-Events, because Messages has no scripting command to show a chat and the
-`imessage://` URL scheme cannot address a named group. That needs Accessibility
-access for whatever runs `msg`: your terminal app, or `~/.cargo/bin/msg` for the
-daemon, under System Settings -> Privacy & Security -> Accessibility. Unnamed
-groups and individual people open through the URL scheme and need nothing.
+```
+msg              fuzzy picker in the terminal
+msg open QUERY   open the best match for QUERY without a picker (for scripts and launchers)
+msg index        rebuild the people cache
+msg daemon       stay resident, popup on the global hotkey
+msg install      start the daemon at login (launchd)
+msg uninstall    stop starting the daemon at login
+```
 
-`msg open QUERY` opens the best match for QUERY without showing a picker, which
-is handy for scripts and launchers.
+## How it works
 
-If you rebuild and copy the binary over the old one in place, macOS may kill it
-with signal 9 on the next launch (cached code signature). Remove the old file
-first, then copy.
-
-The daemon's global hotkey uses a Carbon hotkey registration, which needs no
-special permission, but macOS will not deliver it if another app has already
-claimed the same combination.
+- **Index.** Contacts come from the AddressBook SQLite files, chats from chat.db.
+  Phone numbers are normalized to E.164 so handles join to contacts. Each person
+  gets their name, handles, and the timestamp of their last message. Group chats
+  are named by their display name or their members. Sorted by recency and cached
+  to `~/.cache/msg/people.json`. The cache is rebuilt automatically whenever
+  either database's mtime changes.
+- **Matching.** The `nucleo-matcher` crate, the same fzf-style scorer Helix uses.
+  Ties go to the shorter name, then recency. Empty query shows recency order.
+- **Opening.** People open through the `imessage://` URL scheme. Unnamed groups
+  open by addressing a new message to their exact participants, which Messages
+  resolves to the existing thread. Named groups cannot be reached that way and
+  Messages has no scripting command to show a chat, so they are opened by
+  focusing the Messages search field, typing the name, Down, Enter.
+- **Daemon.** eframe/egui window, hidden until a Carbon global hotkey fires.
+  Idle CPU is zero because nothing repaints while hidden.
 
 The daemon logs to `~/.cache/msg/daemon.log`.
+
+## Not doing
+
+Reading messages, composing, sending, or anything touching Messages beyond
+opening a conversation.
+
+## Development
+
+```sh
+cargo test
+cargo clippy --all-targets
+MSG_CACHE=path/to/fake-people.json cargo run -- daemon   # demo with fictional data
+```
+
+Design spec: `docs/superpowers/specs/2026-09-06-msg-picker-design.md`.
