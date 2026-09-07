@@ -79,6 +79,12 @@ struct App {
     /// with `with_visible(false)`, so the first frame hides it explicitly.
     first_frame: bool,
     focus_query: bool,
+    /// Set whenever the selection moves, so the list scrolls to it once
+    /// rather than every frame (which fought the user's own scrolling).
+    scroll_to_cursor: bool,
+    /// Whether the window has been seen focused since it was shown; a focus
+    /// loss after that means the user clicked elsewhere, so hide.
+    had_focus: bool,
     wake: Receiver<()>,
     log: fn(&str),
 }
@@ -94,6 +100,8 @@ impl App {
         self.picker.refilter();
         self.visible = true;
         self.focus_query = true;
+        self.scroll_to_cursor = true;
+        self.had_focus = false;
         if let Some(monitor) = ctx.input(|i| i.viewport().monitor_size) {
             let pos = ((monitor - egui::vec2(WIDTH, HEIGHT)) * 0.5).to_pos2();
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
@@ -130,6 +138,15 @@ impl eframe::App for App {
             return;
         }
 
+        // Click-off: hide when focus leaves after we have had it.
+        let focused = ctx.input(|i| i.viewport().focused).unwrap_or(true);
+        if focused {
+            self.had_focus = true;
+        } else if self.had_focus {
+            self.hide(ctx);
+            return;
+        }
+
         let mut chosen: Option<Person> = None;
         let mut cancel = false;
 
@@ -145,9 +162,11 @@ impl eframe::App for App {
                 }
                 if i.key_pressed(egui::Key::ArrowDown) {
                     self.picker.move_cursor(1);
+                    self.scroll_to_cursor = true;
                 }
                 if i.key_pressed(egui::Key::ArrowUp) {
                     self.picker.move_cursor(-1);
+                    self.scroll_to_cursor = true;
                 }
             });
 
@@ -166,6 +185,7 @@ impl eframe::App for App {
             }
             if self.picker.query != before {
                 self.picker.refilter();
+                self.scroll_to_cursor = true;
             }
             if edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 chosen = self.picker.selected().cloned();
@@ -199,7 +219,7 @@ impl eframe::App for App {
                             ui.label(text);
                         });
                     });
-                    if selected {
+                    if selected && self.scroll_to_cursor {
                         ui.scroll_to_rect(rect, None);
                     }
                     if resp.clicked() {
@@ -208,6 +228,8 @@ impl eframe::App for App {
                 }
             });
         });
+
+        self.scroll_to_cursor = false;
 
         if cancel {
             self.hide(ctx);
@@ -286,6 +308,8 @@ pub fn daemon(hotkey_spec: &str, log: fn(&str)) -> Result<()> {
                 visible: false,
                 first_frame: true,
                 focus_query: false,
+                scroll_to_cursor: false,
+                had_focus: false,
                 wake: rx,
                 log,
             }))
