@@ -6,7 +6,7 @@ Electron, zero CPU while idle, popup in under 50 ms.
 
 https://github.com/gshklovs/msg/releases/download/v0.1.0/msg-demo.mp4
 
-![msg demo](docs/theme-terminal.gif)
+![msg demo](docs/themes/terminal.gif)
 
 Why: the Messages app's own "New Message" search is slow to populate and does not
 select the top match on Enter. This does.
@@ -102,15 +102,15 @@ launchctl kickstart -k gui/$(id -u)/net.shklovski.msg
 
 | spotlight | terminal |
 |---|---|
-| ![spotlight](docs/theme-spotlight.gif) | ![terminal](docs/theme-terminal.gif) |
+| ![spotlight](docs/themes/spotlight.gif) | ![terminal](docs/themes/terminal.gif) |
 
 | editorial | brutalist |
 |---|---|
-| ![editorial](docs/theme-editorial.gif) | ![brutalist](docs/theme-brutalist.gif) |
+| ![editorial](docs/themes/editorial.gif) | ![brutalist](docs/themes/brutalist.gif) |
 
 | rich | |
 |---|---|
-| ![rich](docs/theme-rich.gif) | |
+| ![rich](docs/themes/rich.gif) | |
 
 Fonts are bundled with the binary under `assets/fonts`, each with its SIL Open
 Font License: JetBrains Mono, Instrument Serif, Instrument Sans, Space Grotesk
