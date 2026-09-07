@@ -44,10 +44,6 @@ impl Picker {
         self.cursor = 0;
     }
 
-    pub fn selected(&self) -> Option<&Person> {
-        self.matches.get(self.cursor).map(|i| &self.people[*i])
-    }
-
     pub fn move_cursor(&mut self, delta: isize) {
         if self.matches.is_empty() {
             return;
@@ -189,10 +185,10 @@ mod tests {
     #[test]
     fn top_match_is_selected_while_typing() {
         let mut p = Picker::new(people());
-        assert_eq!(p.selected().unwrap().name, "Ada Lovelace");
+        assert_eq!(p.people[p.matches[p.cursor]].name, "Ada Lovelace");
         press(&mut p, 'g');
         assert_eq!(p.cursor, 0);
-        assert_eq!(p.selected().unwrap().name, "Grace Hopper");
+        assert_eq!(p.people[p.matches[p.cursor]].name, "Grace Hopper");
     }
 
     #[test]

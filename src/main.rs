@@ -1,10 +1,13 @@
 mod action;
 mod config;
+mod draw;
 mod gui;
 mod index;
 mod launchd;
 mod matcher;
 mod model;
+mod recency;
+mod theme;
 mod tui;
 
 use anyhow::Result;
@@ -92,8 +95,11 @@ fn open_query(query: &str) -> Result<()> {
 
 fn daemon() -> Result<()> {
     let cfg = config::Config::load()?;
-    log(&format!("daemon starting, hotkey {}", cfg.hotkey));
-    gui::daemon(&cfg.hotkey, log)
+    log(&format!(
+        "daemon starting, hotkey {}, theme {}",
+        cfg.hotkey, cfg.theme
+    ));
+    gui::daemon(&cfg.hotkey, cfg.theme, log)
 }
 
 /// Append a line to ~/.cache/msg/daemon.log, and to stderr when attached.
