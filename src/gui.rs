@@ -75,6 +75,9 @@ const HEIGHT: f32 = 420.0;
 struct App {
     picker: Picker,
     visible: bool,
+    /// eframe on macOS shows the window after the first frame even when built
+    /// with `with_visible(false)`, so the first frame hides it explicitly.
+    first_frame: bool,
     focus_query: bool,
     wake: Receiver<()>,
     log: fn(&str),
@@ -110,6 +113,10 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if self.first_frame {
+            self.first_frame = false;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+        }
         while self.wake.try_recv().is_ok() {
             if self.visible {
                 self.hide(ctx);
@@ -230,6 +237,7 @@ pub fn daemon(hotkey_spec: &str, log: fn(&str)) -> Result<()> {
             Ok(Box::new(App {
                 picker: Picker::new(people),
                 visible: false,
+                first_frame: true,
                 focus_query: false,
                 wake: rx,
                 log,
