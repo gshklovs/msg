@@ -13,7 +13,9 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
-    /// Frosted dark panel with rounded corners, in the spirit of Spotlight.
+    /// Dark rounded panel in the spirit of Spotlight. Opaque: egui cannot
+    /// blur what is behind a window, and a see-through panel without that
+    /// blur is just noise.
     #[default]
     Spotlight,
     /// A terminal: monospace, square, prompt at the bottom, list growing up.
@@ -128,7 +130,7 @@ impl Theme {
     pub fn palette(self) -> Palette {
         match self {
             Theme::Spotlight => Palette {
-                window_bg: Color32::from_rgba_unmultiplied(0x1c, 0x1d, 0x23, 235),
+                window_bg: rgb(0x1c1d23),
                 window_border: Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 20),
                 header_bg: None,
                 rule: Color32::from_rgba_unmultiplied(0xff, 0xff, 0xff, 18),
@@ -254,7 +256,7 @@ impl Theme {
             },
             Theme::Terminal => Metrics {
                 header_h: 0.0,
-                footer_h: 56.0,
+                footer_h: 62.0,
                 window_radius: 0.0,
                 border_width: 1.0,
                 row_h: 26.0,

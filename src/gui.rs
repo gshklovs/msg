@@ -320,6 +320,7 @@ impl eframe::App for App {
             view.header(window, &screen);
             let clicked = view.list(window, &screen);
             view.footer(window, &screen);
+            view.border(window);
             if let Some(row) = clicked {
                 chosen = self.rows.get(row).map(|i| self.picker.people[*i].clone());
             }

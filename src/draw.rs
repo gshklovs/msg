@@ -261,10 +261,18 @@ impl<'a> View<'a> {
         );
     }
 
-    /// The window itself: background, rounded corners, border.
+    /// The window's background and rounded corners.
     pub fn window(&self, rect: Rect) {
+        self.ui.painter().rect_filled(
+            rect,
+            Rounding::same(self.met.window_radius),
+            self.pal.window_bg,
+        );
+    }
+
+    /// The window's border, drawn last so a full-bleed row cannot cover it.
+    pub fn border(&self, rect: Rect) {
         let r = Rounding::same(self.met.window_radius);
-        self.ui.painter().rect_filled(rect, r, self.pal.window_bg);
         if self.met.border_width > 0.0 && self.pal.window_border != Color32::TRANSPARENT {
             self.ui.painter().rect_stroke(
                 rect.shrink(self.met.border_width * 0.5),
@@ -662,12 +670,22 @@ impl<'a> View<'a> {
             right -= 16.0;
         }
         let x = rect.left() + self.met.row_pad_x;
+        let room = (right - 10.0 - x).max(20.0);
         let (base, hit) = self.name_formats(selected, self.met.name_size, 0.0);
         let hits = self.hl.hits(&p.name);
         let mut job = name_job(&p.name, hits, &base, &hit);
-        one_line(&mut job, (right - 10.0 - x).max(20.0));
+        one_line(&mut job, room);
+        // egui's default proportional family has one weight, so the bold in
+        // the mockup is struck: the matched run is drawn again, a hair to the
+        // right, over an otherwise transparent copy of the same layout.
+        let mut ghost = base.clone();
+        ghost.color = Color32::TRANSPARENT;
+        let mut bold = name_job(&p.name, hits, &ghost, &hit);
+        one_line(&mut bold, room);
         let g = self.galley(job);
         self.put_left(&g, x, cy);
+        let b = self.galley(bold);
+        self.put_left(&b, x + 0.55, cy);
     }
 
     fn row_terminal(&mut self, rect: Rect, p: &Person, selected: bool) {
@@ -723,10 +741,9 @@ impl<'a> View<'a> {
         let name = self.galley(job);
 
         let sub = match (p.kind, p.members.len()) {
-            (Kind::Group, n) if n > 0 => format!(
-                "Group of {n}, {}",
-                recency::trailing(p.last_message_ts, now).to_lowercase()
-            ),
+            (Kind::Group, n) if n > 0 => {
+                format!("Group of {n}, {}", recency::trailing(p.last_message_ts, now))
+            }
             (Kind::Group, _) => format!("Group, {}", recency::trailing(p.last_message_ts, now)),
             _ => recency::long(p.last_message_ts, now),
         };
@@ -832,7 +849,12 @@ impl<'a> View<'a> {
         one_line(&mut job, room);
         let name = self.galley(job);
 
-        let sub = recency::long(p.last_message_ts, now);
+        let sub = match (p.kind, p.members.len()) {
+            (Kind::Group, n) if n > 0 => {
+                format!("Group of {n}, {}", recency::trailing(p.last_message_ts, now))
+            }
+            _ => recency::long(p.last_message_ts, now),
+        };
         let sg = self.text(
             &sub,
             tf(FontId::new(self.met.meta_size, self.theme.family()), self.pal.dim),
@@ -949,7 +971,7 @@ impl<'a> View<'a> {
             );
         }
 
-        let prompt_cy = rect.top() + 26.0 + 15.0;
+        let prompt_cy = rect.top() + 26.0 + 14.0;
         let pg = self.text(
             ">",
             tf(self.theme.font(self.met.query_size), self.pal.accent),

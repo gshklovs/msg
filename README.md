@@ -69,21 +69,38 @@ Then press **Cmd+Shift+M**. Type. Enter. Esc hides the popup.
 
 ### Configure
 
-`~/.config/msg/config.toml`, one key:
+`~/.config/msg/config.toml`, two keys:
 
 ```toml
 hotkey = "cmd+shift+m"
+theme = "spotlight"
 ```
 
 Modifiers are `cmd`, `ctrl`, `alt` (or `opt`), `shift`. Keys are letters, digits,
 `space`, `enter`, `tab`, `escape`, and `f1` to `f12`. A missing file means the
-default above. Restart the daemon after changing it.
+defaults above. Restart the daemon after changing either key.
+
+The theme picks how the popup looks. All five show the same list and answer the
+same keys; an unknown name is an error that lists the valid ones.
+
+| `theme` | |
+|---|---|
+| `spotlight` | Dark rounded panel, one line per row, matched letters in bold, key hints along the bottom. The default. |
+| `terminal` | Monospace on `#0d1117`, square, prompt at the bottom with the list growing upward so the best match sits next to your cursor. |
+| `editorial` | Warm paper-dark serif, initials in tinted discs, and a line of prose per row: "Texted an hour ago". |
+| `brutalist` | Black and acid yellow, hard rules, a fat block cursor, and the selected row as a full yellow bar. |
+| `rich` | Dense product rows: rounded avatar, name, group chips, subtitle, timestamp. Tab cycles the All / People / Groups filter. |
+
+Fonts are bundled with the binary under `assets/fonts`, each with its SIL Open
+Font License: JetBrains Mono, Instrument Serif, Instrument Sans, Space Grotesk
+and IBM Plex Sans, all instanced from the variable originals in `google/fonts`.
 
 Environment variables:
 
 | Variable | Effect |
 |---|---|
 | `MSG_CACHE` | Path to a people list to use instead of the real one. Also pins it, so the daemon will not rebuild from your databases. Used for demos and tests. |
+| `MSG_PERF` | Log how long a popup and a keystroke took, to `~/.cache/msg/daemon.log`. |
 
 ## Commands
 
