@@ -21,6 +21,13 @@ pub struct Person {
     /// Handle with the most recent chat activity, if known.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub best_handle: Option<String>,
+    /// Participant handles, only set for groups (used to open the chat).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub members: Vec<String>,
+    /// Whether the group carries a user-set name in Messages. Named groups
+    /// cannot be reached by participant list and are opened via search.
+    #[serde(default)]
+    pub named: bool,
 }
 
 impl Person {
@@ -145,6 +152,8 @@ mod tests {
             kind: Kind::Person,
             guid: None,
             best_handle: Some("ada@example.com".into()),
+            members: Vec::new(),
+            named: false,
         };
         assert_eq!(p.target_handle(), Some("ada@example.com"));
         p.best_handle = None;

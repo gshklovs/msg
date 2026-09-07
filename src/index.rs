@@ -304,6 +304,8 @@ pub fn assemble(contacts: Vec<Contact>, chats: &[Chat]) -> Vec<Person> {
             kind: Kind::Person,
             guid: None,
             best_handle: best.map(|(_, h)| h),
+            members: Vec::new(),
+            named: false,
         });
     }
 
@@ -328,6 +330,8 @@ pub fn assemble(contacts: Vec<Contact>, chats: &[Chat]) -> Vec<Person> {
                 kind: Kind::Person,
                 guid: None,
                 best_handle: Some(m.clone()),
+                members: Vec::new(),
+                named: false,
             });
         }
     }
@@ -365,6 +369,8 @@ pub fn assemble(contacts: Vec<Contact>, chats: &[Chat]) -> Vec<Person> {
             kind: Kind::Group,
             guid: Some(c.guid.clone()),
             best_handle: Some(c.chat_identifier.clone()),
+            members: c.members.clone(),
+            named: c.display_name.is_some(),
         });
     }
 
@@ -526,6 +532,8 @@ mod tests {
         assert_eq!(group.name, "Ada Lovelace, Grace Hopper");
         assert_eq!(group.target_handle(), Some("chat9001"));
         assert_eq!(group.guid.as_deref(), Some("iMessage;-;chat9001"));
+        assert!(!group.named);
+        assert_eq!(group.members.len(), 2);
     }
 
     #[test]

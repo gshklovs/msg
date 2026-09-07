@@ -15,6 +15,7 @@ msg - instant iMessage conversation picker
 
   msg              fuzzy picker in the terminal
   msg index        rebuild the people cache
+  msg open QUERY   open the best match for QUERY without a picker
   msg daemon       stay resident, popup on the global hotkey
   msg install      start the daemon at login (launchd)
   msg uninstall    stop starting the daemon at login
@@ -47,6 +48,13 @@ fn run() -> Result<()> {
             );
             Ok(())
         }
+        Some("open") => {
+            let query: Vec<String> = std::env::args().skip(2).collect();
+            if query.is_empty() {
+                anyhow::bail!("usage: msg open QUERY");
+            }
+            open_query(&query.join(" "))
+        }
         Some("daemon") => daemon(),
         Some("install") => install(),
         Some("uninstall") => uninstall(),
@@ -70,6 +78,16 @@ fn pick() -> Result<()> {
         action::open(&person)?;
     }
     Ok(())
+}
+
+fn open_query(query: &str) -> Result<()> {
+    let people = index::load()?;
+    let ranked = matcher::Ranker::new().rank(&people, query);
+    let Some(&i) = ranked.first() else {
+        anyhow::bail!("nothing matches `{query}`");
+    };
+    println!("opening {}", tui::label(&people[i]));
+    action::open(&people[i])
 }
 
 fn daemon() -> Result<()> {

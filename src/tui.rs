@@ -176,6 +176,8 @@ mod tests {
                 kind: Kind::Person,
                 guid: None,
                 best_handle: None,
+                members: Vec::new(),
+                named: false,
             })
             .collect()
     }

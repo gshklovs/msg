@@ -43,6 +43,20 @@ Settings -> Privacy & Security -> Full Disk Access before running `msg install`.
 Without it the daemon still starts and serves the last cached people list; it
 just cannot refresh it.
 
+Opening a *named* group chat drives the Messages search field through System
+Events, because Messages has no scripting command to show a chat and the
+`imessage://` URL scheme cannot address a named group. That needs Accessibility
+access for whatever runs `msg`: your terminal app, or `~/.cargo/bin/msg` for the
+daemon, under System Settings -> Privacy & Security -> Accessibility. Unnamed
+groups and individual people open through the URL scheme and need nothing.
+
+`msg open QUERY` opens the best match for QUERY without showing a picker, which
+is handy for scripts and launchers.
+
+If you rebuild and copy the binary over the old one in place, macOS may kill it
+with signal 9 on the next launch (cached code signature). Remove the old file
+first, then copy.
+
 The daemon's global hotkey uses a Carbon hotkey registration, which needs no
 special permission, but macOS will not deliver it if another app has already
 claimed the same combination.
