@@ -91,6 +91,27 @@ same keys; an unknown name is an error that lists the valid ones.
 | `brutalist` | Black and acid yellow, hard rules, a fat block cursor, and the selected row as a full yellow bar. |
 | `rich` | Dense product rows: rounded avatar, name, group chips, subtitle, timestamp. Tab cycles the All / People / Groups filter. |
 
+Switch with one block, changing only the first line, then press the hotkey:
+
+```sh
+THEME=brutalist   # spotlight | terminal | editorial | brutalist | rich
+mkdir -p ~/.config/msg
+printf 'hotkey = "cmd+shift+m"\ntheme = "%s"\n' "$THEME" > ~/.config/msg/config.toml
+launchctl kickstart -k gui/$(id -u)/net.shklovski.msg
+```
+
+| spotlight | terminal |
+|---|---|
+| ![spotlight](docs/theme-spotlight.gif) | ![terminal](docs/theme-terminal.gif) |
+
+| editorial | brutalist |
+|---|---|
+| ![editorial](docs/theme-editorial.gif) | ![brutalist](docs/theme-brutalist.gif) |
+
+| rich | |
+|---|---|
+| ![rich](docs/theme-rich.gif) | |
+
 Fonts are bundled with the binary under `assets/fonts`, each with its SIL Open
 Font License: JetBrains Mono, Instrument Serif, Instrument Sans, Space Grotesk
 and IBM Plex Sans, all instanced from the variable originals in `google/fonts`.
