@@ -1,6 +1,8 @@
 mod action;
 mod config;
+mod gui;
 mod index;
+mod launchd;
 mod matcher;
 mod model;
 mod tui;
@@ -71,13 +73,35 @@ fn pick() -> Result<()> {
 }
 
 fn daemon() -> Result<()> {
-    anyhow::bail!("daemon mode is not wired up yet")
+    let cfg = config::Config::load()?;
+    log(&format!("daemon starting, hotkey {}", cfg.hotkey));
+    gui::daemon(&cfg.hotkey, log)
+}
+
+/// Append a line to ~/.cache/msg/daemon.log, and to stderr when attached.
+fn log(line: &str) {
+    eprintln!("msg: {line}");
+    if let Ok(dir) = index::cache_dir() {
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dir.join("daemon.log"))
+        {
+            use std::io::Write;
+            let _ = writeln!(f, "{line}");
+        }
+    }
 }
 
 fn install() -> Result<()> {
-    anyhow::bail!("install is not wired up yet")
+    let path = launchd::install()?;
+    println!("installed {}", path.display());
+    println!("the daemon is running; press your hotkey to try it");
+    Ok(())
 }
 
 fn uninstall() -> Result<()> {
-    anyhow::bail!("uninstall is not wired up yet")
+    let path = launchd::uninstall()?;
+    println!("removed {}", path.display());
+    Ok(())
 }

@@ -600,9 +600,13 @@ mod tests {
         let names: Vec<&str> = people.iter().map(|p| p.name.as_str()).collect();
         assert!(names.contains(&"Book Club"));
         assert!(names.contains(&"Ada Lovelace"));
-        // Ada's chat is older than the group's, so the group sorts first.
-        assert_eq!(names[0], "Book Club");
-        // The contact with no chat history is last.
-        assert_eq!(*names.last().unwrap(), "Analytical Engines Ltd");
+        // Both contacts are in the group, so all three rows carry the group's
+        // recency and sort alphabetically against each other.
+        assert_eq!(
+            names,
+            ["Ada Lovelace", "Analytical Engines Ltd", "Book Club"]
+        );
+        let ts = apple_time_to_unix(200000000000000000);
+        assert!(people.iter().all(|p| p.last_message_ts == ts));
     }
 }

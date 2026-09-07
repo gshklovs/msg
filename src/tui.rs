@@ -56,13 +56,6 @@ impl Picker {
         self.cursor = (self.cursor as isize + delta).clamp(0, last as isize) as usize;
     }
 
-    pub fn set_query(&mut self, q: String) {
-        if q != self.query {
-            self.query = q;
-            self.refilter();
-        }
-    }
-
     /// Apply one key. Typing refilters and resets the selection to the top match.
     pub fn on_key(&mut self, key: KeyEvent) -> Outcome {
         match (key.code, key.modifiers) {
