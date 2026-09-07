@@ -6,7 +6,7 @@ Electron, zero CPU while idle, popup in under 50 ms.
 
 https://github.com/gshklovs/msg/releases/download/v0.1.0/msg-demo.mp4
 
-![msg demo](docs/demo.gif)
+![msg demo](docs/theme-terminal.gif)
 
 Why: the Messages app's own "New Message" search is slow to populate and does not
 select the top match on Enter. This does.
